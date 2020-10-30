@@ -12,7 +12,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  File _file;
+  PickedFile _file;
   List<VisionText> _currentLabels = <VisionText>[];
 
   FirebaseVisionTextDetector detector = FirebaseVisionTextDetector.instance;
@@ -40,7 +40,7 @@ class _MyAppState extends State<MyApp> {
               try {
                 //var file = await ImagePicker.pickImage(source: ImageSource.camera);
                 var file =
-                    await ImagePicker.pickImage(source: ImageSource.gallery);
+                    await ImagePicker().getImage(source: ImageSource.gallery);
                 setState(() {
                   _file = file;
                 });
@@ -63,7 +63,7 @@ class _MyAppState extends State<MyApp> {
            FloatingActionButton(
              onPressed: () async {
                try {
-                 var file = await ImagePicker.pickImage(source: ImageSource.camera);
+                 var file = await ImagePicker().getImage(source: ImageSource.camera);
                  setState(() {
                    _file = file;
                  });
@@ -94,13 +94,13 @@ class _MyAppState extends State<MyApp> {
         child: _file == null
             ? Text('No Image')
             : new FutureBuilder<Size>(
-                future: _getImageSize(Image.file(_file, fit: BoxFit.fitWidth)),
+                future: _getImageSize(Image.file(File(_file.path), fit: BoxFit.fitWidth)),
                 builder: (BuildContext context, AsyncSnapshot<Size> snapshot) {
                   if (snapshot.hasData) {
                     return Container(
                         foregroundDecoration:
                             TextDetectDecoration(_currentLabels, snapshot.data),
-                        child: Image.file(_file, fit: BoxFit.fitWidth));
+                        child: Image.file(File(_file.path), fit: BoxFit.fitWidth));
                   } else {
                     return new Text('Detecting...');
                   }
@@ -112,9 +112,11 @@ class _MyAppState extends State<MyApp> {
 
   Future<Size> _getImageSize(Image image) {
     Completer<Size> completer = new Completer<Size>();
-    image.image.resolve(new ImageConfiguration()).addListener(
-        (ImageInfo info, bool _) => completer.complete(
-            Size(info.image.width.toDouble(), info.image.height.toDouble())));
+    image.image
+        .resolve(new ImageConfiguration())
+        .addListener(ImageStreamListener((ImageInfo info, bool _) {
+      completer.complete(Size(info.image.width.toDouble(), info.image.height.toDouble()));
+    }));
     return completer.future;
   }
 
@@ -150,7 +152,7 @@ class _MyAppState extends State<MyApp> {
   Widget _buildRow(String text) {
     return ListTile(
       title: Text(
-        "Text: ${text}",
+        "Text: $text",
       ),
       dense: true,
     );
@@ -188,22 +190,22 @@ class _TextDetectPainter extends BoxPainter {
     final _heightRatio = _originalImageSize.height / configuration.size.height;
     final _widthRatio = _originalImageSize.width / configuration.size.width;
     for (var text in _texts) {
-      // print("text : ${text.text}, rect : ${text.rect}");
+      print("text : ${text.text}, rect : ${text.rect}");
       final _rect = Rect.fromLTRB(
           offset.dx + text.rect.left / _widthRatio,
           offset.dy + text.rect.top / _heightRatio,
           offset.dx + text.rect.right / _widthRatio,
           offset.dy + text.rect.bottom / _heightRatio);
-      // print("_rect : ${_rect}");
+      print("_rect : ${_rect}");
       canvas.drawRect(_rect, paint);
     }
 
-    // print("offset : ${offset}");
-    // print("configuration : ${configuration}");
+    print("offset : ${offset}");
+    print("configuration : ${configuration}");
 
     final rect = offset & configuration.size;
 
-    // print("rect container : ${rect}");
+    print("rect container : ${rect}");
     canvas.restore();
   }
 }
